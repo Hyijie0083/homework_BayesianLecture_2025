@@ -1,0 +1,19 @@
+# This script preprocesss behavior data and replicates behavior results in Bayesian framework
+```{r}
+
+library(brms)    # 贝叶斯回归建模
+library(tidyverse) # 数据处理与可视化
+library(bayestestR) # 贝叶斯结果解读
+library(ggplot2)  # 可视化
+library(bruceR)
+```
+
+```{r}
+data_beh = read.csv('/home/mw/input/Eisenberg20193801/brief_self_control_survey.csv')
+
+15
+
+
+
+
+```
