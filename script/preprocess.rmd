@@ -1,19 +1,274 @@
 # This script preprocesss behavior data and replicates behavior results in Bayesian framework
-```{r}
 
-library(brms)    # 贝叶斯回归建模
-library(tidyverse) # 数据处理与可视化
-library(bayestestR) # 贝叶斯结果解读
-library(ggplot2)  # 可视化
+```{r}
+library(brms) 
+library(tidyverse) 
+library(bayestestR) 
+library(ggplot2)  
 library(bruceR)
+library(dplyr)
+library(bayestestR)
+library(papaja)
+```
+
+```{md}
+# Analysis 1: compare accuracy between 1and 4 distributions in each single feature
+# 1. Merge all behavior data into all one
+# 2. Select 1 and 4 in column of 'cue_dimensionality'
+# 3. Use brms to calculate the difference of accuracy
+# 4. Models diagnosis
+# 5. Statistic inference
+# 6. plot 
 ```
 
 ```{r}
-data_beh = read.csv('/home/mw/input/Eisenberg20193801/brief_self_control_survey.csv')
+# Configuration and Constants
+PATH_RAW_DATA = '../data/behaviorData'
 
-15
+SUBJECT_IDX <- paste0("sub-STSWD", c(
+  1117,1118,1120,1126,1131,1132,1135,1136,
+  1151,1160,1164,1167,1169,1172,1173,1178,
+  1182,1215,1216,1219,1223,1227,1228,1233,
+  1234,1237,1240,1243,1245,1247,1250,1239,
+  1252,1257,1261,1265,1266,1268,1270,1276,1281
+))
+
+BIDS_TASK_LABEL_BEH = '_task-MAT_behavEEG'
+
+```
+
+```{r for merge. (1)}
+# Load behavior data and merge into a full dataframe.
+behavior_list <- list()
+
+for (sub_idx in SUBJECT_IDX) {
+  cat("Processing subject:", sub_idx, "\n")  
+  # Set path
+  path_beh <- file.path(
+    PATH_RAW_DATA,
+    paste0(sub_idx, BIDS_TASK_LABEL_BEH, ".csv")
+  )
+
+  # Check the path
+  if (!file.exists(path_beh)) stop("Behavior file not found: ", path_beh)
+
+  # Load behavior data 
+  data_behavior <- read.csv(path_beh, sep = ",", header = TRUE, check.names = FALSE)
+  # Add 'subj_idx'
+  data_behavior['subj_idx'] <- sub_idx
+  data_behavior$subj_idx <- str_remove(sub_idx, "sub-STSWD")
+  # Make a list
+  behavior_list[[sub_idx]] <- data_behavior
+}
+
+data_behavior_full <- bind_rows(behavior_list)
+
+```
+
+```{r for ACC, compared with chance level. (2,3)}
+# Compare ACC against chance level for different single feature under both '1' and '4' loading effect 
+models_accuracy_bayes <- list()
+
+probe_idx <- c('1','2','3','4')
+cue_levels <- c('1', '4')
+
+for (probe in probe_idx) {
+  for (cue in cue_levels) {
+    df_sub <- data_behavior_full %>%
+      dplyr::filter(
+        probe_attribute == probe,
+        cue_dimensionality == cue
+      )
+    
+    # Set Bayesian model and smapling
+    model <- brms::brm(
+      probe_accuracy ~ 1,
+      data = df_sub,
+      family = bernoulli(link = "logit"),
+      iter = 2000,
+      warmup = 1000,
+      chains = 4,
+      cores = 4,
+      seed = 42,
+    )
+    
+    # name：model_prove1_cue1, model_prove1_cue4, etc.
+    model_name <- paste0("model_accuracy_probe", probe, "_cue", cue)
+    models_accuracy_bayes[[model_name]] <- model
+  }
+}
+
+saveRDS(models_accuracy_bayes, "../results/models_accuracy_bayes.rds")
+
+```
+
+```{r for model diagnosis.(4)}
+# Define a function to diagnose all models
+model_diagnostics <- function(model_list) {
+  # Set dataframe to save data
+  results <- data.frame(
+    model_name = names(model_list),
+    Rhat = NA,
+    bulk_ESS = NA
+  )
+  
+  # Summary and extract value
+  for (i in seq_along(model_list)) {
+    m <- model_list[[i]]
+    m_summary = summary(m)
+    results$Rhat[i] <- m_summary$fixed$Rhat
+    results$bulk_ESS[i] <- m_summary$fixed$Bulk_ESS
+    
+  }
+  
+  return(results)
+}
+
+# diagnose 8 models
+# If you clear your workplace, you can use the code below to load models, which were made by last chunks
+# models_accuracy_bayes <- readRDS("../results/models_accuracy_bayes.rds")
+diagnosis_table <- model_diagnostics(models_accuracy_bayes)
+print(diagnosis_table)
+
+```
+
+```{r for statistic inference. (5)}
 
 
 
 
+
+
+#####################################################################
+# 假设 m 是你的模型
+post <- as_draws_df(m)
+
+# 查看结构
+head(post)
+
+# 提取 b_Intercept 样本
+log_odds_samples <- post$b_Intercept
+
+# 转换为正确率 p
+p_samples <- plogis(log_odds_samples)
+
+
+mcmc_dens(post, pars = "b_Intercept")  # log-odds 尺度
+
+# 正确率尺度（需手动）
+ggplot(post, aes(x = b_Intercept)) +
+  geom_density(fill = "skyblue") +
+  labs(x = "Accuracy (p)", title = "Posterior distribution of accuracy")
+
+
+summary(m)
+
+trace2 <- rstan::extract(m)
+
+hdi <- bayestestR::hdi(m)
+rope1 <- bayestestR::rope(m, range = c(0.45, 0.55))
+
+beta1_plot <- plot(rope1, rope_color = "grey70") + 
+  ggplot2::annotate("text", # 添加标签显示 Rope 值
+                    x = 0, y = 0.5,
+                    label = paste0("ROPE: ", round(rope1$ROPE_Percentage * 100, 1), "%"), 
+                    color = "black", size = 6) +
+  ggplot2::annotate("text",  # 添加标签显示 HDI 区间
+                    x = mean(m$beta_2), y = 0.1,
+                    label = paste0("95% HDI:\n[", round(beta2_hdi95$CI_low, 3), ", ",
+                                   round(beta2_hdi95$CI_high, 3), "]"),
+                    color = "black", size = 6)
+  papaja::theme_apa() + ggplot2::scale_y_continuous(expand = c(0, 0)) +
+  ggplot2::theme(legend.position = c(0.85, 0.75))  # 调整图例位置
+  
+```
+
+
+```{r}
+
+library(tidyverse)
+library(brms)
+library(papaja)
+
+# 1. 从所有模型中提取后验样本并转换为正确率 p
+post_list <- list()
+
+for (name in names(models_accuracy_bayes)) {
+  m <- models_accuracy_bayes[[name]]
+  
+  # 提取 b_Intercept 后验样本（矩阵）
+  post_draws <- as_draws_df(m)
+  p_samples <- plogis(post_draws$b_Intercept)
+  
+  # 解析模型名，提取 probe 和 cue
+  # name: "model_accuracy_probe1_cue1"
+  probe <- str_extract(name, "(?<=probe)\\d")
+  cue   <- str_extract(name, "(?<=cue)\\d")
+  
+  # 构造数据框
+  df_post <- tibble(
+    p = p_samples,
+    probe = probe,
+    cue = cue,
+    model = name
+  )
+  
+  post_list[[name]] <- df_post
+}
+
+# 合并所有
+df_all <- bind_rows(post_list) %>%
+  mutate(
+    probe = factor(probe, levels = c("1", "2", "3", "4")),
+    cue = factor(cue, levels = c("1", "4"))
+  )
+
+# 2. 计算每个组的中位数和 95% CI（用于标注）
+summaries <- df_all %>%
+  group_by(probe, cue) %>%
+  summarise(
+    median_p = median(p),
+    lwr = quantile(p, 0.025),
+    upr = quantile(p, 0.975),
+    .groups = "drop"
+  )
+
+# 3. 画图
+p <- ggplot(df_all, aes(x = p)) +
+  geom_density(fill = "skyblue", alpha = 0.6) +
+  geom_vline(
+    data = summaries,
+    aes(xintercept = median_p),
+    color = "black", linewidth = 0.8
+  ) +
+  geom_vline(
+    data = summaries,
+    aes(xintercept = lwr),
+    linetype = "dashed", color = "black", linewidth = 0.6
+  ) +
+  geom_vline(
+    data = summaries,
+    aes(xintercept = upr),
+    linetype = "dashed", color = "black", linewidth = 0.6
+  ) +
+  facet_wrap(~ probe + cue, labeller = labeller(
+    probe = function(x) paste("Probe", x),
+    cue = function(x) paste("Cue", x)
+  )) +
+  labs(
+    x = "Accuracy (p)",
+    y = "Density",
+    title = "Posterior distributions of accuracy",
+    subtitle = "Medians and 95% credible intervals"
+  ) +
+  theme_apa() +
+  theme(
+    strip.text = element_text(face = "bold"),
+    axis.title = element_text(size = 10),
+    axis.text = element_text(size = 9)
+  )
+
+# 4. 显示或保存
+print(p)
+ggsave("posterior_accuracy_8panels.pdf", p, width = 10, height = 6)
 ```
