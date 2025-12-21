@@ -12,13 +12,16 @@ library(papaja)
 ```
 
 ```{md}
-# Analysis 1: compare accuracy between 1and 4 distributions in each single feature
+# Analysis 1: compare accuracy with chance level between 1and 4 distributions in each single feature
 # 1. Merge all behavior data into all one
 # 2. Select 1 and 4 in column of 'cue_dimensionality'
 # 3. Use brms to calculate the difference of accuracy
 # 4. Models diagnosis
 # 5. Statistic inference
 # 6. plot 
+
+# Analysis 2: Compare ACC and RT between different distributions
+# 1. Merge all behavior data into all one
 ```
 
 ```{r}
@@ -62,6 +65,8 @@ for (sub_idx in SUBJECT_IDX) {
 }
 
 data_behavior_full <- bind_rows(behavior_list)
+data_behavior_full$probe_attribute <- as.factor(data_behavior_full$probe_attribute)
+data_behavior_full$cue_dimensionality <- as.factor(data_behavior_full$cue_dimensionality)
 
 ```
 
@@ -82,7 +87,7 @@ for (probe in probe_idx) {
     
     # Set Bayesian model and smapling
     model <- brms::brm(
-      probe_accuracy ~ 1,
+      probe_accuracy ~ 1 + (1|subj_idx),
       data = df_sub,
       family = bernoulli(link = "logit"),
       iter = 2000,
@@ -98,7 +103,7 @@ for (probe in probe_idx) {
   }
 }
 
-saveRDS(models_accuracy_bayes, "../results/models_accuracy_bayes.rds")
+saveRDS(models_accuracy_bayes, "../results/models_accuracy_bayes_complete_pooling.rds")
 
 ```
 
@@ -272,3 +277,53 @@ p <- ggplot(df_all, aes(x = p)) +
 print(p)
 ggsave("posterior_accuracy_8panels.pdf", p, width = 10, height = 6)
 ```
+
+```{r for analysis 2}
+
+# Set Bayesian model and sampling
+# Model4ACC
+models_analysis_2 <- list()
+model_acc <- brms::brm(
+  probe_accuracy ~ 1 + cue_dimensionality,
+  data = data_behavior_full,
+  family = bernoulli(link = "logit"),
+  iter = 2000,
+  warmup = 1000,
+  chains = 4,
+  cores = 4,
+  seed = 42)
+# name
+model_name <- paste0("model_acc_analysis_2")
+models_analysis_2[[model_name]] <- model
+
+# Model4RT
+
+model_acc <- brms::brm(
+  probe_rt ~ 1 + cue_dimensionality + (1 + cue_dimensionality|subj_idx),
+  data = data_behavior_full,
+  family = gaussian(),
+  iter = 2000,
+  warmup = 1000,
+  chains = 4,
+  cores = 4,
+  seed = 42)
+# name
+model_name <- paste0("model_acc_analysis_2")
+models_analysis_2[[model_name]] <- model
+
+
+
+
+
+
+
+
+ggplot2::ggplot(data = data_behavior_full, aes(x = cue_dimensionality, y = probe_rt)) +
+  # 散点层
+  ggplot2::geom_point(alpha = 0.6, size = 2) +
+  # 线性回归拟合层
+  ggplot2::geom_smooth(method = "lm", se = TRUE, color = "#0072B2", fill = "#56B4E9") +
+  papaja::theme_apa()
+
+```
+
