@@ -129,7 +129,7 @@ for (probe in probe_idx) {
   }
 }
 
-saveRDS(model_list_analysis_1, "../results/model_list_analysis_1_complete_pooling.rds")
+saveRDS(model_list_analysis_1, "../results/model_list_analysis_1_partial_pooling.rds")
 
 ```
 
@@ -157,7 +157,7 @@ model_diagnostics <- function(model_list) {
 
 # diagnose 8 models
 # If you clear your workplace, you can use the code below to load models, which were made by last chunks
-# model_list_analysis_1 <- readRDS("../results/model_list_analysis_1_complete_pooling.rds")
+# model_list_analysis_1 <- readRDS("../results/model_list_analysis_1_partial_pooling.rds")
 diagnosis_table_analysis_1 <- model_diagnostics(model_list_analysis_1)
 print(diagnosis_table_analysis_1)
 
@@ -230,9 +230,11 @@ data_plot <- data_behavior_full %>%
   )
 
 ggplot(data = data_plot, 
-       aes(x = probe_attribute, y = mean_acc, firll = cue_dimensionality, color = cue_dimensionality)) +
-  smplot2::sm_bar() +
+       aes(x = probe_attribute, y = mean_acc, group = cue_dimensionality, color = cue_dimensionality)) +
+  smplot2::sm_bar(
+    position = position_dodge(width = 1)) +
   scale_color_manual(values = sm_color('wine','skyblue','lightbrown','yelloworange'))
+?sm_bar
 ```
 
 #########
@@ -268,7 +270,7 @@ model_rt <- brms::brm(
 model_name_rt <- paste0("model_rt_analysis_2")
 model_list_analysis_2[[model_name_rt]] <- model_rt
 
-saveRDS(model_list_analysis_2, "../results/model_list_analysis_2_complete_pooling.rds")
+saveRDS(model_list_analysis_2, "../results/model_list_analysis_2_partial_pooling.rds")
 ```
 
 ```{r for model diagnosis.(3_2)}
