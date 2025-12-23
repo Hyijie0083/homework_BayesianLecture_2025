@@ -1,0 +1,29 @@
+# This script plots dic plot for 4 models and make statistic inference for drift rate
+
+```{r}
+library(brms) 
+library(tidyverse) 
+library(bruceR)
+library(bayestestR)
+library(papaja)
+library(smplot2)
+library(patchwork)
+
+```
+
+```{r for Configuration and constant}
+PATH <- '../results/hddm/dic_model_full.csv'
+
+```
+
+```{r for plot dic}
+data_dic <- read.csv(PATH)
+data_dic_difference <- data_dic[2:5,]
+data_dic_difference[, 2] <- data_dic_difference[, 2] - data_dic[1, 2]
+
+ggplot(data = data_dic_difference, mapping = aes(x = model, y = DIC)) +
+  smplot2::sm_bar(
+     bar.params = list(width = 0.2, alpha = 1, color = "transparent", fill = "black")
+  )
+
+```
