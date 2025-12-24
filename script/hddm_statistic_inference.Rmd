@@ -12,18 +12,165 @@ library(patchwork)
 ```
 
 ```{r for Configuration and constant}
-PATH <- '../results/hddm/dic_model_full.csv'
+PATH_DIC <- '../results/hddm/dic_model_full.csv'
+PATH_A <- '../results/hddm/data_posterior_a.csv'
+PATH_V <- '../results/hddm/data_posterior_v.csv'
+PATH_T <- '../results/hddm/data_posterior_t.csv'
 
 ```
 
 ```{r for plot dic}
-data_dic <- read.csv(PATH)
+data_dic <- read.csv(PATH_DIC)
 data_dic_difference <- data_dic[2:5,]
 data_dic_difference[, 2] <- data_dic_difference[, 2] - data_dic[1, 2]
 
-ggplot(data = data_dic_difference, mapping = aes(x = model, y = DIC)) +
+figure_dic = ggplot(data = data_dic_difference, mapping = aes(x = model, y = DIC/1000)) +
   smplot2::sm_bar(
-     bar.params = list(width = 0.2, alpha = 1, color = "transparent", fill = "black")
+     bar.params = list(width = 0.5)
+  )+
+   scale_y_continuous(
+    name = "DIC (×10³)"
   )
+figure_dic+ggview::canvas(width = 200,height = 400*2/3, units = "mm", dpi = 320)
+ggsave(
+  filename = '../figure/plot_dic.jpg',
+  plot = figure_dic,                
+  width = 200,                       
+  height = 400*2/3,                       
+  units = "mm",
+  dpi = 320
+)
+
+```
+
+```{r for statistic inference_load data and plot posterior values}
+
+# load data and change into long data
+data_posterior_a <- read.csv(PATH_A)
+data_posterior_a_long <- data_posterior_a %>%
+  tidyr::pivot_longer(
+    cols = everything(),  
+    names_to = "a_condition", 
+    values_to = "a_value"
+  )
+
+data_posterior_v <- read.csv(PATH_V)
+data_posterior_v_long <- data_posterior_v %>%
+  tidyr::pivot_longer(
+    cols = everything(),
+    names_to = "v_condition",         
+    values_to = "v_value" 
+  )
+
+data_posterior_t <- read.csv(PATH_T)
+data_posterior_t_long <- data_posterior_t %>%
+  tidyr::pivot_longer(
+    cols = everything(),
+    names_to = "t_condition",         
+    values_to = "t_value" 
+  )
+
+
+### plot
+# a
+figure_hddm_a = ggplot(data = data_posterior_a_long, mapping = aes(x = a_condition, y = a_value, fill = a_condition)) +
+  sm_raincloud(which_side = "l") +
+  scale_fill_manual(values = sm_color("darkred", "viridian",'yelloworange','wine'))
+figure_hddm_a+ggview::canvas(width = 300,height = 400*2/3, units = "mm", dpi = 320)
+
+ggsave(
+  filename = '../figure/plot_hddm_a.jpg',
+  plot = figure_hddm_a,                
+  width = 300,                       
+  height = 400*2/3,                       
+  units = "mm",
+  dpi = 320
+)
+
+# v
+figure_hddm_v = ggplot(data = data_posterior_v_long, mapping = aes(x = v_condition, y = v_value, fill = v_condition)) +
+  sm_raincloud(which_side = "l") +
+  scale_fill_manual(values = sm_color("darkred", "viridian",'yelloworange','wine'))
+figure_hddm_v+ggview::canvas(width = 300,height = 400*2/3, units = "mm", dpi = 320)
+
+ggsave(
+  filename = '../figure/plot_hddm_v.jpg',
+  plot = figure_hddm_v,                
+  width = 300,                       
+  height = 400*2/3,                       
+  units = "mm",
+  dpi = 320
+)
+
+# t
+figure_hddm_t = ggplot(data = data_posterior_t_long, mapping = aes(x = t_condition, y = t_value, fill = t_condition)) +
+  sm_raincloud(which_side = "l") +
+  scale_fill_manual(values = sm_color("darkred", "viridian",'yelloworange','wine'))
+figure_hddm_t+ggview::canvas(width = 300,height = 400*2/3, units = "mm", dpi = 320)
+
+ggsave(
+  filename = '../figure/plot_hddm_t.jpg',
+  plot = figure_hddm_t,                
+  width = 300,                       
+  height = 400*2/3,                       
+  units = "mm",
+  dpi = 320
+)
+
+```
+
+```{r for Bayesian models setting and sampling}
+
+model_a <- brms::brm(
+  a_value ~ 1 + a_condition,
+  data = data_posterior_a_long,
+  family = gaussian(),
+  iter = 2000,
+  warmup = 1000,
+  chains = 4,
+  cores = 4,
+  seed = 42)
+
+saveRDS(model_a, "../results/hddm/statistic_inference/model_a.rds")
+
+model_v <- brms::brm(
+  v_value ~ 1 + v_condition,
+  data = data_posterior_v_long,
+  family = gaussian(),
+  iter = 2000,
+  warmup = 1000,
+  chains = 4,
+  cores = 4,
+  seed = 42)
+
+saveRDS(model_v, "../results/hddm/statistic_inference/model_v.rds")
+
+model_t <- brms::brm(
+  t_value ~ 1 + t_condition,
+  data = data_posterior_t_long,
+  family = gaussian(),
+  iter = 2000,
+  warmup = 1000,
+  chains = 4,
+  cores = 4,
+  seed = 42)
+
+saveRDS(model_t, "../results/hddm/statistic_inference/model_t.rds")
+
+```
+
+```{r for statictic inference_Bayesian comparision}
+emmeans_a <- emmeans(model_a, ~ a_condition)
+compare_pairs_a<- pairs(emmeans_a)
+summary(compare_pairs_a)
+
+emmeans_v <- emmeans(model_v, ~ v_condition)
+compare_pairs_v<- pairs(emmeans_v)
+summary(compare_pairs_v)
+
+emmeans_t <- emmeans(model_t, ~ t_condition)
+compare_pairs_t<- pairs(emmeans_t)
+summary(compare_pairs_t)
+
 
 ```
