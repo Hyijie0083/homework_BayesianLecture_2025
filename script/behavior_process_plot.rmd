@@ -306,37 +306,40 @@ for (m in seq_along(model_list_analysis_2)){
   model <- model_list_analysis_2[[m]]
   model_name <- names(model_list_analysis_2)[[m]]
   
-  trace_par_cue2 <- as.data.frame(model)$b_cue_dimensionality2
-  trace_par_cue3 <- as.data.frame(model)$b_cue_dimensionality3
-  trace_par_cue4 <- as.data.frame(model)$b_cue_dimensionality4
+  trace_par_cue2vs1 <- as.data.frame(model)$b_cue_dimensionality2
+  trace_par_cue3vs1 <- as.data.frame(model)$b_cue_dimensionality3
+  trace_par_cue4vs1 <- as.data.frame(model)$b_cue_dimensionality4
   
-  hdi_2 <- bayestestR::hdi(trace_par_cue2, ci = 0.95)
-  rope_res_2 <- bayestestR::rope(trace_par_cue2, range = c(-0.1,0.1))
+  trace_par_cue3vs2 = trace_par_cue3vs1-trace_par_cue2vs1
+  trace_par_cue4vs2 = trace_par_cue4vs1-trace_par_cue2vs1
+  trace_par_cue4vs3 = trace_par_cue4vs1-trace_par_cue3vs1
+  
+  hdi_3vs2 <- bayestestR::hdi(trace_par_cue3vs2, ci = 0.95)
+  rope_res_2 <- bayestestR::rope(trace_par_cue3vs2, range = c(-0.1,0.1))
                                  
-  hdi_3 <- bayestestR::hdi(trace_par_cue3, ci = 0.95)
-  rope_res_3 <- bayestestR::rope(trace_par_cue3, range = c(-0.1,0.1))
+  hdi_4vs2 <- bayestestR::hdi(trace_par_cue4vs2, ci = 0.95)
+  rope_res_3 <- bayestestR::rope(trace_par_cue4vs2, range = c(-0.1,0.1))
   
-  hdi_4 <- bayestestR::hdi(trace_par_cue4, ci = 0.95)
-  rope_res_4 <- bayestestR::rope(trace_par_cue4, range = c(-0.1,0.1))
+  hdi_4vs3 <- bayestestR::hdi(trace_par_cue4vs3, ci = 0.95)
+  rope_res_4 <- bayestestR::rope(trace_par_cue4vs3, range = c(-0.1,0.1))
   
-  p_2 <- plot(rope_res_2, rope_color = "grey70") +
+  p_3vs2 <- plot(rope_res_2, rope_color = "grey70") +
     papaja::theme_apa() +
-    ggtitle(paste(model_name, 'cue2'))
+    ggtitle(paste(model_name, 'cue3vs2'))
   
-  p_3 <- plot(rope_res_3, rope_color = "grey70") +
+  p_4vs2 <- plot(rope_res_3, rope_color = "grey70") +
     papaja::theme_apa() +
-    ggtitle(paste(model_name, 'cue3'))
+    ggtitle(paste(model_name, 'cue4vs2'))
   
-  p_4 <- plot(rope_res_4, rope_color = "grey70") +
+  p_4vs3 <- plot(rope_res_4, rope_color = "grey70") +
     papaja::theme_apa() +
-    ggtitle(paste(model_name, 'cue4'))
+    ggtitle(paste(model_name, 'cue4vs3'))
   
-  plot_list <- c(plot_list, p_2, p_3, p_4)
+  plot_list <- c(plot_list, p_3vs2, p_4vs2, p_4vs3)
 }
 
 final_plot_analysis_2 <- patchwork::wrap_plots(plot_list, ncol = 3)
-  #ggview::canvas(width = 400,height = 200*2/3, units = "mm", dpi = 320)
-print(final_plot_analysis_2)
+final_plot_analysis_2+ggview::canvas(width = 400,height = 200*2/3, units = "mm", dpi = 320)
 
 ggplot2::ggsave(
   filename = '../figure/final_plot_analysis_2.jpg',
