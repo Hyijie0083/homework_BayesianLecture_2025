@@ -175,34 +175,33 @@ for (i in seq_along(model_names)) {
   trace_par_cue4vs1 <- as.data.frame(model)[,4]
   
   trace_par_cue3vs2 <- trace_par_cue3vs1-trace_par_cue2vs1
-  trace_par_cue4vs2 <- trace_par_cue4vs1-trace_par_cue2vs1
   trace_par_cue4vs3 <- trace_par_cue4vs1-trace_par_cue3vs1
   
+  hdi_2vs1 <- bayestestR::hdi(trace_par_cue2vs1, ci = 0.95)
+  rope_res_2vs1 <- bayestestR::rope(trace_par_cue2vs1, range = c(-0.001,0.001))
+  
   hdi_3vs2 <- bayestestR::hdi(trace_par_cue3vs2, ci = 0.95)
-  rope_res_2 <- bayestestR::rope(trace_par_cue3vs2, range = c(-0.001,0.001))
-                                 
-  hdi_4vs2 <- bayestestR::hdi(trace_par_cue4vs2, ci = 0.95)
-  rope_res_3 <- bayestestR::rope(trace_par_cue4vs2, range = c(-0.001,0.001))
+  rope_res_3vs2 <- bayestestR::rope(trace_par_cue3vs2, range = c(-0.001,0.001))
+
   
   hdi_4vs3 <- bayestestR::hdi(trace_par_cue4vs3, ci = 0.95)
-  rope_res_4 <- bayestestR::rope(trace_par_cue4vs3, range = c(-0.001,0.001))
+  rope_res_4vs3 <- bayestestR::rope(trace_par_cue4vs3, range = c(-0.001,0.001))
   
-  p_3vs2 <- plot(rope_res_2, rope_color = "grey70") +
+  p_2vs1 <- plot(rope_res_2vs1, rope_color = "grey70") +
+    papaja::theme_apa() +
+    ggtitle(paste(model_name, 'cue2vs1'))
+  
+  p_3vs2 <- plot(rope_res_3vs2, rope_color = "grey70") +
     papaja::theme_apa() +
     ggtitle(paste(model_name, 'cue3vs2'))
   
-  p_4vs2 <- plot(rope_res_3, rope_color = "grey70") +
-    papaja::theme_apa() +
-    ggtitle(paste(model_name, 'cue4vs2'))
-  
-  p_4vs3 <- plot(rope_res_4, rope_color = "grey70") +
+  p_4vs3 <- plot(hdi_4vs3, rope_color = "grey70") +
     papaja::theme_apa() +
     ggtitle(paste(model_name, 'cue4vs3'))
  
-  final_plot <- patchwork::wrap_plots(p_3vs2, p_4vs2, p_4vs3, ncol = 3)
+  final_plot <- patchwork::wrap_plots(p_2vs1, p_3vs2, p_4vs3, ncol = 3)
   
-  final_plot_a <- patchwork::wrap_plots(plot_list_a, ncol = )
-  final_plot_a+ggview::canvas(width = 400,height = 100*2/3, units = "mm", dpi = 320)
+  final_plot+ggview::canvas(width = 300,height = 100*2/3, units = "mm", dpi = 320)
   ggplot2::ggsave(
     filename = paste0("../figure/final_plot_", sub("model_", "", model_name), ".jpg"),
     plot = final_plot,
