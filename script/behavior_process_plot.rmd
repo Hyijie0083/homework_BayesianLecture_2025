@@ -275,21 +275,21 @@ models_list_analysis_2[[model_name_acc]] <- model_acc
 model_rt <- brms::brm(
   media_rt ~ 1 + cue_dimensionality + (1 + cue_dimensionality|subj_idx),
   data = data_analysis,
-  family = gaussian(),
+  family = lognormal(),
   iter = 2000,
   warmup = 1000,
   chains = 4,
   cores = 4,
   seed = 42)
 model_name_rt <- paste0("model_rt_analysis_2")
-model_list_analysis_2[[model_name_rt]] <- model_rt
+models_list_analysis_2[[model_name_rt]] <- model_rt
 
-saveRDS(model_list_analysis_2, "../results/model_list_analysis_2_partial_pooling.rds")
+saveRDS(models_list_analysis_2, "../results/model_list_analysis_2_partial_pooling.rds")
 ```
 
 ```{r for model diagnosis.(3_2)}
 
-diagnosis_table_analysis_2 <- model_diagnostics(model_list_analysis_2)
+diagnosis_table_analysis_2 <- model_diagnostics(models_list_analysis_2)
 print(diagnosis_table_analysis_2)
 
 ```
@@ -310,32 +310,32 @@ for (m in seq_along(model_list_analysis_2)){
   trace_par_cue3vs1 <- as.data.frame(model)$b_cue_dimensionality3
   trace_par_cue4vs1 <- as.data.frame(model)$b_cue_dimensionality4
   
+  trace_par_cue2vs1 <- trace_par_cue2vs1
   trace_par_cue3vs2 = trace_par_cue3vs1-trace_par_cue2vs1
-  trace_par_cue4vs2 = trace_par_cue4vs1-trace_par_cue2vs1
   trace_par_cue4vs3 = trace_par_cue4vs1-trace_par_cue3vs1
   
   hdi_3vs2 <- bayestestR::hdi(trace_par_cue3vs2, ci = 0.95)
-  rope_res_2 <- bayestestR::rope(trace_par_cue3vs2, range = c(-0.1,0.1))
+  rope_res_3vs2 <- bayestestR::rope(trace_par_cue3vs2, range = c(-0.1,0.1))
                                  
-  hdi_4vs2 <- bayestestR::hdi(trace_par_cue4vs2, ci = 0.95)
-  rope_res_3 <- bayestestR::rope(trace_par_cue4vs2, range = c(-0.1,0.1))
+  hdi_2vs1 <- bayestestR::hdi(trace_par_cue2vs1, ci = 0.95)
+  rope_res_2vs1 <- bayestestR::rope(trace_par_cue2vs1, range = c(-0.1,0.1))
   
   hdi_4vs3 <- bayestestR::hdi(trace_par_cue4vs3, ci = 0.95)
-  rope_res_4 <- bayestestR::rope(trace_par_cue4vs3, range = c(-0.1,0.1))
+  rope_res_4vs3 <- bayestestR::rope(trace_par_cue4vs3, range = c(-0.1,0.1))
   
-  p_3vs2 <- plot(rope_res_2, rope_color = "grey70") +
+  p_3vs2 <- plot(rope_res_3vs2, rope_color = "grey70") +
     papaja::theme_apa() +
     ggtitle(paste(model_name, 'cue3vs2'))
   
-  p_4vs2 <- plot(rope_res_3, rope_color = "grey70") +
+  p_2vs1 <- plot(rope_res_2vs1, rope_color = "grey70") +
     papaja::theme_apa() +
-    ggtitle(paste(model_name, 'cue4vs2'))
+    ggtitle(paste(model_name, 'cue2vs1'))
   
-  p_4vs3 <- plot(rope_res_4, rope_color = "grey70") +
+  p_4vs3 <- plot(rope_res_4vs3, rope_color = "grey70") +
     papaja::theme_apa() +
     ggtitle(paste(model_name, 'cue4vs3'))
   
-  plot_list <- c(plot_list, p_3vs2, p_4vs2, p_4vs3)
+  plot_list <- c(plot_list, p_2vs1, p_3vs2, p_4vs3)
 }
 
 final_plot_analysis_2 <- patchwork::wrap_plots(plot_list, ncol = 3)
